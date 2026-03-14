@@ -1,6 +1,6 @@
 # Contributing to Tiny11 Automated
 
-Thank you for your interest in contributing to Tiny11 Automated! This project has reached **2,000+ downloads** and maintains a **100% build success rate** thanks to careful automation.
+Thank you for your interest in contributing to Tiny11 Automated! This project has reached **40,000+ downloads** and maintains a **100% build success rate** thanks to careful automation.
 
 **Author:** kelexine  
 **GitHub:** https://github.com/kelexine/tiny11-automated
