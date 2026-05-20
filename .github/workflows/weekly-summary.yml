@@ -11,6 +11,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: |
+          pip install requests
+      
       - name: Generate Summary
         run: |
           # Parse tracked_releases.json for stats
@@ -20,4 +29,4 @@ jobs:
           python3 scripts/discord_notify.py \
             --webhook "${{ secrets.DISCORD_WEBHOOK_RELEASES }}" \
             --type daily-summary \
-            --data "{\"checks_today\":1,\"new_releases\":$NEW_TODAY,\"builds_completed\":12,\"builds_failed\":0}"
+            --data "{\"checks_today\":$CHECKS,\"new_releases\":$NEW_TODAY,\"builds_completed\":12,\"builds_failed\":0}"
