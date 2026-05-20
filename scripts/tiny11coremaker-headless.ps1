@@ -391,20 +391,34 @@ function Remove-SystemPackages {
 }
 
 function Remove-EdgeAndOneDrive {
-    Write-Log "Removing Microsoft Edge..."
+    Write-Log "Removing Microsoft Edge and Edge WebView..."
 
     $edgePaths = @(
         "$scratchDir\Program Files (x86)\Microsoft\Edge",
         "$scratchDir\Program Files (x86)\Microsoft\EdgeUpdate",
         "$scratchDir\Program Files (x86)\Microsoft\EdgeCore",
+        "$scratchDir\Program Files (x86)\Microsoft\EdgeWebView",
         "$scratchDir\Windows\System32\Microsoft-Edge-Webview"
     )
 
     foreach ($path in $edgePaths) {
         if (Test-Path $path) {
+            Write-Log "Deleting Edge component: $path"
             & takeown /f $path /r /a | Out-Null
             & icacls $path /grant "$($adminGroup.Value):(F)" /T /C | Out-Null
             Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # Remove Edge WebView directories inside WinSxS (covers amd64 and arm64)
+    Write-Log "Removing Edge WebView assemblies from WinSxS..."
+    $winSxSPaths = Get-ChildItem -Path "$scratchDir\Windows\WinSxS" -Filter "*microsoft-edge-webview_31bf3856ad364e35*" -Directory -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+    foreach ($winSxSPath in $winSxSPaths) {
+        if (Test-Path $winSxSPath) {
+            Write-Log "Taking ownership and removing WinSxS WebView folder: $winSxSPath"
+            & takeown /f $winSxSPath /r /a | Out-Null
+            & icacls $winSxSPath /grant "$($adminGroup.Value):(F)" /T /C | Out-Null
+            Remove-Item -Path $winSxSPath -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 

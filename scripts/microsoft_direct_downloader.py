@@ -120,9 +120,44 @@ class MicrosoftPlaywrightDownloader:
                 # Random delay before selection to mimic human behavior
                 self._random_delay(0.5, 1.5)
                 
-                # Select Windows 11 multi-edition ISO (value="3262")
-                logger.info(f"✅ Selecting Windows 11 multi-edition (value=3262)...")
-                page.select_option('#product-edition', value='3262')
+                # Select Windows 11 multi-edition ISO dynamically
+                logger.info("✅ Resolving Windows 11 multi-edition ISO option...")
+                selected_edition = False
+                try:
+                    # Retrieve all option elements from the dropdown
+                    options = page.locator('#product-edition option').all()
+                    logger.info(f"🔍 Found {len(options)} edition options in dropdown")
+                    
+                    for option in options:
+                        val = option.get_attribute('value')
+                        txt = option.text_content() or ""
+                        # Match options containing both "Windows 11" and "multi-edition" (case insensitive)
+                        if val and 'windows 11' in txt.lower() and 'multi-edition' in txt.lower():
+                            logger.info(f"✨ Matching edition found: '{txt.strip()}' (value='{val}')")
+                            page.select_option('#product-edition', value=val)
+                            selected_edition = True
+                            break
+                    
+                    if not selected_edition:
+                        # Revert to dynamic label selection if option iteration failed
+                        logger.warning("Could not find matching option by iterating. Trying text search fallback...")
+                        page.select_option('#product-edition', label='Windows 11 (multi-edition ISO for x64 devices)')
+                        selected_edition = True
+                except Exception as select_err:
+                    logger.warning(f"⚠️ Dynamic text/label matching failed: {select_err}")
+                    # Revert to known hardcoded values
+                    for fallback_val in ['3321', '3262']:
+                        try:
+                            logger.info(f"Attempting fallback selection using value: {fallback_val}...")
+                            page.select_option('#product-edition', value=fallback_val)
+                            selected_edition = True
+                            break
+                        except Exception:
+                            continue
+                
+                if not selected_edition:
+                    logger.error("❌ Failed to select product edition option")
+                    raise ValueError("Failed to select a valid product edition from the dropdown menu.")
                 
                 self._random_delay(0.5, 1.0)
                 

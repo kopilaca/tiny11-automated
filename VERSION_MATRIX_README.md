@@ -208,6 +208,23 @@ For each detected release, generates 6 build configurations:
   "title": "Windows_11_version_24H2_26100.7462"
 }
 ```
+## 🧪 Scraper Testing Suite
+
+To ensure that the direct downloader browser scraping engine behaves correctly even if Microsoft changes their DOM structure, the project maintains a comprehensive mock unit test suite in the `tests/` directory.
+
+To install dependencies and execute the test harness:
+```bash
+# 1. Initialize local virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 2. Install dependencies & test packages
+pip install -r requirements.txt pytest pytest-asyncio
+
+# 3. Run the pytest suite
+pytest tests/test_microsoft_downloader.py
+```
+This test suite is automatically executed inside the GitHub Actions runner during the CI workflow to block and prevent broken builds or matrix dispatches.
 
 ## 🐛 Troubleshooting
 

@@ -590,11 +590,11 @@ function Remove-EdgeAndOneDrive {
     # Remove Edge paths
     Remove-Item -Path "$scratchDir\Program Files (x86)\Microsoft\Edge*" -Recurse -Force -ErrorAction SilentlyContinue
     
-    # Remove Edge WebView from WinSxS
-    if ($script:architecture -eq 'amd64') {
-        $folderPath = Get-ChildItem -Path "$scratchDir\Windows\WinSxS" -Filter "amd64_microsoft-edge-webview_31bf3856ad364e35*" -Directory -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
-        if ($folderPath) {
-            Remove-Item -Path $folderPath -Recurse -Force -ErrorAction SilentlyContinue
+    # Remove Edge WebView from WinSxS (covers amd64 and arm64)
+    $winSxSPaths = Get-ChildItem -Path "$scratchDir\Windows\WinSxS" -Filter "*microsoft-edge-webview_31bf3856ad364e35*" -Directory -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+    foreach ($winSxSPath in $winSxSPaths) {
+        if (Test-Path $winSxSPath) {
+            Remove-Item -Path $winSxSPath -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
     

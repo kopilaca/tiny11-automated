@@ -769,10 +769,28 @@ We welcome contributions from the community! Tiny11 Automated serves **2,000+ us
 1. Read [CONTRIBUTING.md](CONTRIBUTING.md)
 2. Fork the repository
 3. Create a feature branch (`git checkout -b feature/amazing-feature`)
-4. Test your changes locally
+4. Test your changes locally (see testing section below)
 5. Commit with clear messages (`git commit -m 'feat: add amazing feature'`)
 6. Push to your fork (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
+
+### 🧪 Scraper Unit Testing
+
+For Python automation components (such as `scripts/microsoft_direct_downloader.py`), a robust unit and integration test suite is located in the `tests/` directory.
+
+To run the test suite in an isolated environment:
+```bash
+# 1. Set up a local virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 2. Install dependencies & test requirements
+pip install -r requirements.txt pytest pytest-asyncio
+
+# 3. Execute the test suite
+pytest tests/test_microsoft_downloader.py
+```
+This test suite uses complete mock coverage of Playwright page locators and user-agent rotations to validate scraper behavior without performing live requests.
 
 ### Contributor Recognition
 

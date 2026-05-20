@@ -6,7 +6,7 @@ name: Version Matrix Builder
 
 on:
   schedule:
-    # Run daily at 00:00 UTC to check for new releases
+    # Run weekly at 00:00 UTC on Sundays to check for new releases
     - cron: '0 0 * * 0'
   workflow_dispatch:
     inputs:
@@ -67,11 +67,15 @@ jobs:
       - name: Install Dependencies
         run: |
           if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
+            pip install -r requirements.txt pytest pytest-asyncio
           else
             # Fallback to direct install if no requirements file
-            pip install requests beautifulsoup4 lxml playwright
+            pip install requests beautifulsoup4 lxml playwright pytest pytest-asyncio
           fi
+
+      - name: Run Downloader Unit Tests
+        run: |
+          pytest tests/test_microsoft_downloader.py
 
       - name: Install Playwright Browsers
         run: playwright install --with-deps chromium

@@ -41,6 +41,7 @@ Each folder contains:
 ### Tiny11 (Standard)
 - Serviceable Windows 11 image
 - Removes 50+ bloatware apps including AI/Copilot/Recall
+- Complete removal of Microsoft Edge WebView2 footprints (Program Files and WinSxS assemblies)
 - Enhanced telemetry blocking and privacy protection
 - VRAM gaming optimization
 - Maintains WinSxS for updates
@@ -49,6 +50,7 @@ Each folder contains:
 
 ### Tiny11 Core
 - Ultra-minimal Windows 11 image
+- Complete removal of Microsoft Edge WebView2 footprints (Program Files and WinSxS assemblies)
 - Aggressive WinSxS removal
 - Windows Update binaries removed (~300 MB saved)
 - No Windows Updates possible (NON-SERVICEABLE)
@@ -58,6 +60,7 @@ Each folder contains:
 
 ### Nano11
 - EXTREME minimal Windows 11 image
+- Complete removal of Microsoft Edge WebView2 footprints (Program Files and WinSxS assemblies)
 - Removes drivers, fonts, services, apps
 - Windows Update binaries removed (~300 MB saved)
 - No printing, no Notepad/Paint
