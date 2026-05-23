@@ -87,7 +87,11 @@ function Set-RegistryValue {
         [string]$value
     )
     try {
-        & 'reg' 'add' $path '/v' $name '/t' $type '/d' $value '/f' | Out-Null
+        if ($name) {
+            & 'reg' 'add' $path '/v' $name '/t' $type '/d' $value '/f' | Out-Null
+        } else {
+            & 'reg' 'add' $path '/ve' '/t' $type '/d' $value '/f' | Out-Null
+        }
         Write-Log "Set registry: $path\$name = $value"
     } catch {
         Write-Log "Error setting registry $path\$name : $_" "ERROR"
@@ -326,6 +330,12 @@ function Remove-BloatwareApps {
         'Microsoft.Windows.DevHome',
         'Microsoft.Windows.Copilot',
         'Microsoft.Windows.Teams',
+        'Microsoft.Windows.Photos',
+        'Microsoft.ScreenSketch',
+        'Microsoft.StorePurchaseApp',
+        'Microsoft.MPEG2VideoExtension',
+        'Microsoft.WebMediaExtensions',
+        'MicrosoftWindows.Client.WebExperience',
         'Microsoft.WindowsAlarms',
         'Microsoft.WindowsCamera',
         'microsoft.windowscommunicationsapps',
@@ -405,14 +415,35 @@ function Remove-EdgeAndOneDrive {
     }
     
     Write-Log "Removing OneDrive..."
-    $oneDrivePath = "$scratchDir\Windows\System32\OneDriveSetup.exe"
-    if (Test-Path $oneDrivePath) {
-        & takeown /f $oneDrivePath /a | Out-Null
-        & icacls $oneDrivePath /grant "$($adminGroup.Value):(F)" /T /C | Out-Null
-        Remove-Item -Path $oneDrivePath -Force -ErrorAction SilentlyContinue
+    $oneDrivePaths = @(
+        "$scratchDir\Windows\System32\OneDriveSetup.exe",
+        "$scratchDir\Windows\SysWOW64\OneDriveSetup.exe"
+    )
+    foreach ($path in $oneDrivePaths) {
+        if (Test-Path $path) {
+            Write-Log "Deleting OneDrive setup: $path"
+            & takeown /f $path /a | Out-Null
+            & icacls $path /grant "$($adminGroup.Value):(F)" /T /C | Out-Null
+            Remove-Item -Path $path -Force -ErrorAction SilentlyContinue
+        }
     }
     
     Write-Log "Edge, Edge WebView, and OneDrive removal complete"
+    
+    # Clean up other remnants
+    Write-Log "Cleaning up other remnants (GameBar, Copilot)..."
+    $otherRemnants = @(
+        "$scratchDir\Windows\GameBarPresenceWriter",
+        "$scratchDir\Windows\System32\SettingsHandlers_Copilot.dll"
+    )
+    foreach ($path in $otherRemnants) {
+        if (Test-Path $path) {
+            Write-Log "Deleting remnant: $path"
+            & takeown /f $path /a | Out-Null
+            & icacls $path /grant "$($adminGroup.Value):(F)" /T /C | Out-Null
+            Remove-Item -Path $path -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 function Apply-RegistryTweaks {
@@ -491,6 +522,10 @@ function Apply-RegistryTweaks {
     # Disable OneDrive folder backup
     Set-RegistryValue "HKLM\zSOFTWARE\Policies\Microsoft\Windows\OneDrive" "DisableFileSyncNGSC" "REG_DWORD" "1"
     
+    # Remove OneDrive from Run keys (prevent auto-install on first login)
+    Remove-RegistryValue "HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\Run\OneDriveSetup"
+    Remove-RegistryValue "HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\Run\OneDriveSetup"
+    
     # Disable telemetry
     Set-RegistryValue 'HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo' 'Enabled' 'REG_DWORD' '0'
     Set-RegistryValue 'HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\Privacy' 'TailoredExperiencesWithDiagnosticDataEnabled' 'REG_DWORD' '0'
@@ -535,7 +570,18 @@ function Apply-RegistryTweaks {
     
     # Prevent new Outlook installation
     Set-RegistryValue 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\Windows Mail' 'PreventRun' 'REG_DWORD' '1'
+
+    # Easter Egg / Branding
+    Write-Log "Adding Easter Egg branding..."
+    Set-RegistryValue 'HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' 'legalnoticecaption' 'REG_SZ' 'Tiny11 Automated'
+    Set-RegistryValue 'HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' 'legalnoticetext' 'REG_SZ' 'This image was built using Tiny11 Automated by kelexine. Enjoy your lightweight Windows experience!'
     
+    # Desktop Context Menu Link
+    Set-RegistryValue 'HKLM\zSOFTWARE\Classes\DesktopBackground\Shell\Tiny11Info' 'MUIVerb' 'REG_SZ' 'Tiny11 Automated Info'
+    Set-RegistryValue 'HKLM\zSOFTWARE\Classes\DesktopBackground\Shell\Tiny11Info' 'Icon' 'REG_SZ' 'shell32.dll,22'
+    Set-RegistryValue 'HKLM\zSOFTWARE\Classes\DesktopBackground\Shell\Tiny11Info' 'Position' 'REG_SZ' 'Bottom'
+    Set-RegistryValue 'HKLM\zSOFTWARE\Classes\DesktopBackground\Shell\Tiny11Info\command' '' 'REG_SZ' 'explorer.exe "https://github.com/kelexine/tiny11-automated"'
+
     Write-Log "Registry tweaks applied"
 }
 
