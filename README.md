@@ -20,8 +20,8 @@
 
 ## 📊 Project Stats
 
-- **📦 Total Downloads**: 101840 (and growing!)
-- **🌍 Active Users**: 101840 worldwide
+- **📦 Total Downloads**: 102784 (and growing!)
+- **🌍 Active Users**: 102784 worldwide
 - **✅ Build Success Rate**: 100%
 - **⏱️ Average Build Time**: ~30-50 minutes
 - **💾 ISO Size Reduction**: Up to 50% smaller (Windows 11 25H2)
