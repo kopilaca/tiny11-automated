@@ -73,11 +73,8 @@ tiny11-automated/
 │       ├── build-tiny11-core.yml
 │       └── build-nano11.yml
 ├── scripts/
-│   ├── tiny11maker-BASE.ps1          # Original interactive (ntdevlabs)
 │   ├── tiny11maker-headless.ps1      # Automated version
-│   ├── tiny11Coremaker-BASE.ps1      # Core interactive
 │   ├── tiny11coremaker-headless.ps1  # Core automated
-│   ├── nano11builder-BASE.ps1        # Nano interactive
 │   └── nano11builder-headless.ps1    # Nano automated
 ├── autounattend.xml         # OOBE bypass for Standard/Core
 ├── autounattend-nano.xml    # OOBE bypass for Nano

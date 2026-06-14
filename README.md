@@ -230,11 +230,8 @@ tiny11-automated/
 │   ├── ISSUE_TEMPLATE/         # Issue templates
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── scripts/
-│   ├── tiny11maker-BASE.ps1              # Original interactive (ntdevlabs)
 │   ├── tiny11maker-headless.ps1          # ✨ Automated Standard
-│   ├── tiny11Coremaker-BASE.ps1          # Original Core interactive
 │   ├── tiny11coremaker-headless.ps1      # ✨ Automated Core
-│   ├── nano11builder-BASE.ps1            # Original Nano interactive
 │   └── nano11builder-headless.ps1        # ✨ Automated Nano
 ├── autounattend.xml            # OOBE bypass (Standard/Core)
 ├── autounattend-nano.xml       # OOBE bypass (Nano)
@@ -837,7 +834,7 @@ All contributors are recognized in:
 ### Licensing Information
 
 - **Tiny11 Automated** (headless scripts, CI/CD): MIT License © 2025 kelexine
-- **Original tiny11builder** (BASE scripts): MIT License © ntdevlabs
+- **Inspired by tiny11builder**: Original concept and interactive scripts by [ntdevlabs](https://github.com/ntdevlabs/tiny11builder), MIT License — the headless automation in this project was built on top of that foundation
 - **Individual files**: See copyright notices in each file
 
 ### MIT License Summary
