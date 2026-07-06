@@ -63,7 +63,7 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "BUILD_START_UNIX=$startUnix"
 
       - name: Generate release tag and ISO name
-        shell: powershell
+        shell: pwsh
         run: |
           # Get date for tag and ISO naming
           $date = Get-Date -Format 'yyyy-MM-dd'
@@ -127,7 +127,7 @@ jobs:
         shell: pwsh
         
       - name: System information
-        shell: powershell
+        shell: pwsh
         run: |
           Write-Output "=== System Information ==="
           Write-Output "OS: $(Get-CimInstance Win32_OperatingSystem | Select-Object -ExpandProperty Caption)"
@@ -145,14 +145,14 @@ jobs:
           }
           
       - name: Install aria2c
-        shell: powershell
+        shell: pwsh
         run: |
           Write-Output "Installing aria2c for faster downloads..."
           choco install aria2 -y --no-progress
           aria2c --version
           
       - name: Download Windows 11 ISO
-        shell: powershell
+        shell: pwsh
         run: |
           $url = "${{ github.event.inputs.windows_iso_url }}"
           $output = "Win11_Source.iso"
@@ -191,7 +191,7 @@ jobs:
           Write-Output "Download complete: ${sizeGB}GB in $($downloadTime.TotalMinutes.ToString('F2')) minutes"
           
       - name: Mount Windows ISO
-        shell: powershell
+        shell: pwsh
         run: |
           $isoPath = Join-Path $PWD "Win11_Source.iso"
           Write-Output "Mounting ISO: $isoPath"
@@ -228,7 +228,7 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "ISO_DRIVE=$driveLetter"
           
       - name: Prepare autounattend.xml
-        shell: powershell
+        shell: pwsh
         run: |
           if (Test-Path "autounattend.xml") {
             Write-Output "Found local autounattend.xml"
@@ -239,7 +239,7 @@ jobs:
           }
           
       - name: Verify headless script
-        shell: powershell
+        shell: pwsh
         run: |
           $scriptPath = ".\scripts\tiny11maker-headless.ps1"
           
@@ -253,7 +253,7 @@ jobs:
           Write-Output "Headless script found: $scriptPath"
           
       - name: Run tiny11maker (headless mode)
-        shell: powershell
+        shell: pwsh
         run: |
           Set-ExecutionPolicy Bypass -Scope Process -Force
           
@@ -280,7 +280,7 @@ jobs:
           Write-Output "Build completed in $($buildTime.TotalMinutes.ToString('F2')) minutes"
           
       - name: Verify tiny11 ISO creation
-        shell: powershell
+        shell: pwsh
         run: |
           $tempIso = ".\scripts\tiny11.iso"
           $isoName = "${{ env.ISO_FILENAME }}"
@@ -366,7 +366,7 @@ jobs:
         shell: pwsh
 
       - name: Cleanup before upload
-        shell: powershell
+        shell: pwsh
         run: |
           Write-Output "Cleaning up to free disk space..."
           
@@ -389,7 +389,7 @@ jobs:
 
       - name: Check upload configuration
         id: check-upload
-        shell: powershell
+        shell: pwsh
         env:
           SF_KEY: ${{ secrets.SF_SSH_KEY }}
           ENABLE_UPLOAD: ${{ vars.ENABLE_SOURCEFORGE_UPLOAD }}
@@ -407,7 +407,7 @@ jobs:
         env:
           SF_SSH_KEY: ${{ secrets.SF_SSH_KEY }}
           SF_USERNAME: ${{ secrets.SF_USERNAME }}
-        shell: powershell
+        shell: pwsh
         run: |
           if ([string]::IsNullOrWhiteSpace($env:SF_SSH_KEY)) {
             Write-Error "SF_SSH_KEY secret is not configured"
@@ -422,7 +422,7 @@ jobs:
           
       - name: Setup SSH for SourceForge
         if: env.DO_UPLOAD == 'true'
-        shell: powershell
+        shell: pwsh
         env:
           SF_PROJECT: ${{ secrets.SF_PROJECT }}
           SF_SSH_KEY: ${{ secrets.SF_SSH_KEY }}
@@ -467,7 +467,7 @@ jobs:
 
       - name: Upload to SourceForge (Recursive Method)
         if: env.DO_UPLOAD == 'true'
-        shell: powershell
+        shell: pwsh
         env:
           SF_USERNAME: ${{ secrets.SF_USERNAME }}
           SF_PROJECT: ${{ secrets.SF_PROJECT }}
@@ -514,7 +514,7 @@ jobs:
           
       - name: Cleanup SSH credentials
         if: always()
-        shell: powershell
+        shell: pwsh
         run: |
           $keyPath = "$env:USERPROFILE\.ssh\sf_key"
           if (Test-Path $keyPath) {
