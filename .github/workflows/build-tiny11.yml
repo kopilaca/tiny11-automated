@@ -16,6 +16,10 @@ on:
         description: 'Windows 11 ISO download URL'
         required: true
         default: 'https://software.download.prss.microsoft.com/dbazure/Win11_25H2_English_x64.iso?t=641a9719-5089-48d3-b683-44d9012b040e&P1=1765893811&P2=601&P3=2&P4=kPgTlzFR6%2bt9lzW6l2ITzVyc3%2fMHiCzaC5YMwf3RcQH%2bXezCHitvttx2e91%2fT%2bPcXPxVLKAYbeqrAW2mZozm1q%2bTjC4JYdInC0gROdmtKH2X84U99HD1RzRhTXmFi7lemqPDAHcOZ4yx95AzW6rzMvQF2QBsmSE%2fl5l8bWupChqEd28LHdjMXrSu3otYpyxc8S4cFluEgaLD2mkPCrqX61ij2PUrqiZM2jq%2bbz5Fx3kNXCZ3Z1pJkfKKQGb3T%2fvbbWfu7avjuU2kBDJjyeecJH3MGeTP9jsbT6oIHU95AL05%2bA43il%2f4rGDNcFGji1logGrKYi%2f%2b2fDpCFuGh9rN5w%3d%3d'
+      windows_build:
+        description: 'Fallback Windows build number (e.g. 26200.8655) — only used if it cannot be read directly from the ISO'
+        required: false
+        default: ''
       image_index:
         description: 'Windows image index (1=Home, 4=Education, 6=Pro, 7=Pro N)'
         required: true
@@ -62,10 +66,10 @@ jobs:
           $startUnix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
           Add-Content -Path $env:GITHUB_ENV -Value "BUILD_START_UNIX=$startUnix"
 
-      - name: Generate release tag and ISO name
+      - name: Generate folder name and build parameters
         shell: pwsh
         run: |
-          # Get date for tag and ISO naming
+          # ISO filename/tag are finalized later in "Verify tiny11 ISO creation"
           $date = Get-Date -Format 'yyyy-MM-dd'
           $version = "${{ github.event.inputs.windows_version }}"
 
@@ -81,27 +85,15 @@ jobs:
 
           $language = "${{ github.event.inputs.language }}" -replace '[^a-zA-Z]', ''
 
-          # Generate tag and names - New structure: Tiny11-EDITION-VERSION for folders
+          # New structure: Tiny11-EDITION-VERSION for folders (unchanged)
           $folderName = "Tiny11-$edition-$version"
-          $isoName = "Tiny11-$version-$language-$edition-$date.iso"
 
-          # For GitHub releases, we'll use a more specific tag with date
-          $baseTag = "tiny11-$version-$date"
-
-          # Check if tag already exists
-          $existingTags = $(git tag -l "$baseTag*" | Measure-Object).Count
-          if ($existingTags -gt 0) {
-              $baseTag = "$baseTag-$($existingTags + 1)"
-          }
-
-          Write-Output "Generated tag: $baseTag"
-          Write-Output "Generated ISO name: $isoName"
           Write-Output "Generated folder name: $folderName"
 
-          Add-Content -Path $env:GITHUB_ENV -Value "RELEASE_TAG=$baseTag"
-          Add-Content -Path $env:GITHUB_ENV -Value "ISO_FILENAME=$isoName"
           Add-Content -Path $env:GITHUB_ENV -Value "FOLDER_NAME=$folderName"
           Add-Content -Path $env:GITHUB_ENV -Value "EDITION_NAME=$edition"
+          Add-Content -Path $env:GITHUB_ENV -Value "BUILD_DATE=$date"
+          Add-Content -Path $env:GITHUB_ENV -Value "BUILD_LANGUAGE=$language"
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -283,7 +275,6 @@ jobs:
         shell: pwsh
         run: |
           $tempIso = ".\scripts\tiny11.iso"
-          $isoName = "${{ env.ISO_FILENAME }}"
 
           # Check if ISO was created
           if (-not (Test-Path $tempIso)) {
@@ -292,6 +283,49 @@ jobs:
             Get-ChildItem -Path . | Format-Table Name, Length, LastWriteTime
             exit 1
           }
+
+          # Real build number: from ISO metadata, else workflow_dispatch fallback
+          $buildInfoPath = ".\scripts\tiny11-buildinfo.json"
+          $buildNumber = ""
+
+          if (Test-Path $buildInfoPath) {
+            try {
+              $buildInfo = Get-Content -Path $buildInfoPath -Raw | ConvertFrom-Json
+              $buildNumber = $buildInfo.windows_build
+              Write-Output "Build number from ISO metadata: $buildNumber"
+            } catch {
+              Write-Output "Could not parse $buildInfoPath : $_"
+            }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($buildNumber)) {
+            $buildNumber = "${{ github.event.inputs.windows_build }}"
+            if (-not [string]::IsNullOrWhiteSpace($buildNumber)) {
+              Write-Output "Build number from workflow fallback input: $buildNumber"
+            }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($buildNumber)) {
+            Write-Error "Unable to determine Windows build number: ISO metadata extraction failed and no windows_build fallback input was provided. Refusing to publish an ISO without a verifiable build number."
+            exit 1
+          }
+
+          $version = "${{ github.event.inputs.windows_version }}"
+          $language = "$env:BUILD_LANGUAGE"
+          $edition = "$env:EDITION_NAME"
+          $date = "$env:BUILD_DATE"
+
+          $isoName = "Tiny11-$version-$buildNumber-$language-$edition-$date.iso"
+
+          # Build-number-first tag, suffixed to avoid collisions across editions
+          $baseTag = "$buildNumber-std-$($edition.ToLower())"
+
+          Write-Output "Generated ISO name: $isoName"
+          Write-Output "Generated release tag: $baseTag"
+
+          Add-Content -Path $env:GITHUB_ENV -Value "ISO_FILENAME=$isoName"
+          Add-Content -Path $env:GITHUB_ENV -Value "RELEASE_TAG=$baseTag"
+          Add-Content -Path $env:GITHUB_ENV -Value "WINDOWS_BUILD_NUMBER=$buildNumber"
 
           # Rename to proper filename
           Move-Item -Path $tempIso -Destination $isoName -Force
@@ -314,6 +348,7 @@ jobs:
           Tiny11 ISO Verification
           ========================
           File: $isoName
+          Windows Build: $buildNumber
           Size: ${sizeGB}GB
           Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')
           Image Index: ${{ github.event.inputs.image_index }}

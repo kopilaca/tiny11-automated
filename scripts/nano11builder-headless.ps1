@@ -273,6 +273,17 @@ function Resolve-ImageIndex {
     
     $selectedImage = $images | Where-Object { $_.ImageIndex -eq $script:INDEX }
     Write-Log "Selected: Index $script:INDEX - $($selectedImage.ImageName)"
+
+    # kelexine: extract build number (e.g. 26200.8655) from mounted image Version
+    $script:DetectedImageName = $selectedImage.ImageName
+    $script:DetectedFullVersion = $selectedImage.Version
+    if ($script:DetectedFullVersion -match '(\d+\.\d+)$') {
+        $script:DetectedBuildNumber = $Matches[1]
+        Write-Log "Detected Windows build number: $script:DetectedBuildNumber (full version: $script:DetectedFullVersion)"
+    } else {
+        $script:DetectedBuildNumber = ""
+        Write-Log "Could not parse a build number from image version '$script:DetectedFullVersion'" "WARN"
+    }
 }
 
 function Mount-WindowsImageFile {
@@ -1341,6 +1352,27 @@ function Create-NanoISO {
     }
 }
 
+function Write-BuildInfo {
+    # kelexine: emits build metadata JSON so CI can read the real Windows build number
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$OutputPath
+    )
+    try {
+        $buildInfo = @{
+            windows_build = $script:DetectedBuildNumber
+            full_version  = $script:DetectedFullVersion
+            image_name    = $script:DetectedImageName
+            image_index   = $INDEX
+            generated_at  = (Get-Date -Format 'o')
+        }
+        $buildInfo | ConvertTo-Json | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
+        Write-Log "Build info written to $OutputPath"
+    } catch {
+        Write-Log "Failed to write build info to $OutputPath : $_" "WARN"
+    }
+}
+
 function Invoke-Cleanup {
     if ($SkipCleanup) {
         Write-Log "Skipping cleanup (SkipCleanup flag set)" "WARN"
@@ -1423,6 +1455,7 @@ try {
     Convert-ToESD
     Clean-IsoRoot
     Create-NanoISO
+    Write-BuildInfo -OutputPath "$PSScriptRoot\nano11-buildinfo.json"
 
     # Cleanup
     Invoke-Cleanup

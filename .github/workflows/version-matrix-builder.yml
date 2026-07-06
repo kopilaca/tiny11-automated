@@ -319,6 +319,7 @@ jobs:
                 image_index: edition.toString(),
                 skip_cleanup: 'false',
                 windows_version: release.version,
+                windows_build: release.build || '',
                 language: 'English'
               }
             });
