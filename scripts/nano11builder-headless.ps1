@@ -274,9 +274,24 @@ function Resolve-ImageIndex {
     $selectedImage = $images | Where-Object { $_.ImageIndex -eq $script:INDEX }
     Write-Log "Selected: Index $script:INDEX - $($selectedImage.ImageName)"
 
-    # kelexine: extract build number (e.g. 26200.8655) from mounted image Version
+    # kelexine: the list object from 'Get-WindowsImage -ImagePath' has no 'Version'
+    # property - DISM only populates Version/SPBuild/Architecture on the detailed
+    # per-index object returned by 'Get-WindowsImage -ImagePath ... -Index N'.
+    # Re-query with -Index for build-number extraction. Wrapped in try/catch since
+    # this must never hard-fail the build - CI has its own windows_build fallback.
     $script:DetectedImageName = $selectedImage.ImageName
-    $script:DetectedFullVersion = $selectedImage.Version
+    $script:DetectedFullVersion = ""
+    try {
+        $detailedImage = Get-WindowsImage -ImagePath $sourceImagePath -Index $script:INDEX
+        if ($detailedImage -and ($detailedImage.PSObject.Properties.Match('Version').Count -gt 0)) {
+            $script:DetectedFullVersion = $detailedImage.Version
+        } else {
+            Write-Log "Detailed image query for index $script:INDEX returned no 'Version' property." "WARN"
+        }
+    } catch {
+        Write-Log "Failed to query detailed image info for build number detection: $_" "WARN"
+    }
+
     if ($script:DetectedFullVersion -match '(\d+\.\d+)$') {
         $script:DetectedBuildNumber = $Matches[1]
         Write-Log "Detected Windows build number: $script:DetectedBuildNumber (full version: $script:DetectedFullVersion)"

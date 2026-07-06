@@ -71,3 +71,72 @@ Describe "Consistency across all three maker scripts" {
         }
     }
 }
+
+Describe "Regression: basic image list object has no 'Version' property" {
+    # kelexine: 'Get-WindowsImage -ImagePath $x' (no -Index) returns the basic
+    # list object (ImageIndex/ImageName/ImageDescription/ImageSize only). Under
+    # Set-StrictMode -Version Latest, reading .Version off that object throws
+    # "The property 'Version' cannot be found on this object." This regressed
+    # a real CI run (nano11, index 6, Pro) - see commit fixing this file.
+
+    $repoRoot = Split-Path -Parent $PSScriptRoot
+    $scripts = @(
+        "$repoRoot\scripts\tiny11maker-headless.ps1",
+        "$repoRoot\scripts\tiny11coremaker-headless.ps1",
+        "$repoRoot\scripts\nano11builder-headless.ps1"
+    )
+
+    foreach ($scriptPath in $scripts) {
+        $scriptName = Split-Path -Leaf $scriptPath
+        $content = Get-Content -Path $scriptPath -Raw
+
+        It "$scriptName does not read .Version directly off the basic list object" {
+            # The buggy pattern: assigning DetectedFullVersion straight from
+            # $selectedImage (the Where-Object-filtered list entry).
+            $content | Should -Not -Match ([regex]::Escape('$script:DetectedFullVersion = $selectedImage.Version'))
+        }
+
+        It "$scriptName re-queries Get-WindowsImage with -Index for the detailed object" {
+            $content | Should -Match ([regex]::Escape('Get-WindowsImage -ImagePath $sourceImagePath -Index $script:INDEX'))
+        }
+
+        It "$scriptName guards the detailed re-query in a try/catch so a DISM failure can't hard-crash the build" {
+            $pattern = '(?s)try\s*\{[^}]*Get-WindowsImage -ImagePath \$sourceImagePath -Index \$script:INDEX.*?\}\s*catch\s*\{'
+            $content | Should -Match $pattern
+        }
+
+        It "$scriptName verifies the 'Version' property exists before reading it" {
+            $content | Should -Match ([regex]::Escape("PSObject.Properties.Match('Version')"))
+        }
+    }
+
+    It "simulated fix: detailed per-index object exposes Version, basic list object does not" {
+        # Mirrors the real DISM cmdlet shapes without requiring DISM/Windows.
+        function Get-WindowsImage {
+            param([string]$ImagePath, [int]$Index)
+            if ($PSBoundParameters.ContainsKey('Index')) {
+                return [pscustomobject]@{
+                    ImageIndex = $Index
+                    ImageName  = "Windows 11 Pro"
+                    Version    = "10.0.26200.8655"
+                }
+            }
+            return @([pscustomobject]@{
+                ImageIndex = 6
+                ImageName  = "Windows 11 Pro"
+                # Intentionally no Version property - matches real DISM basic list output.
+            })
+        }
+
+        $images = Get-WindowsImage -ImagePath "fake.esd"
+        $selectedImage = $images | Where-Object { $_.ImageIndex -eq 6 }
+
+        # The bug: this property genuinely does not exist on the basic object.
+        $selectedImage.PSObject.Properties.Match('Version').Count | Should -Be 0
+
+        # The fix: re-querying with -Index returns an object that does have it.
+        $detailedImage = Get-WindowsImage -ImagePath "fake.esd" -Index 6
+        $detailedImage.PSObject.Properties.Match('Version').Count | Should -Be 1
+        $detailedImage.Version | Should -Be "10.0.26200.8655"
+    }
+}
